@@ -23,6 +23,17 @@ function loadReminders() {
     }
 }
 
+async function logErrorToDiscord(error) {
+    console.error("⚠️ Error encountered:", error);
+
+    try {
+        const logChannel = await client.channels.fetch("1352011403200041135");
+        await logChannel.send(`⚠️ **Error Encountered:**\n\`\`\`${error.stack || error}\`\`\``);
+    } catch (err) {
+        console.error("⚠️ Failed to log error to Discord:", err);
+    }
+}
+
 // Function to post the weekly chore list automatically
 async function postWeeklyChoreList() {
     const channelId = "1351264750960382014";
@@ -183,7 +194,7 @@ function startZohoMonitor() {
                         msg.on('body', stream => {
                             simpleParser(stream, async (err, parsed) => {
                                 if (err) {
-                                    console.error("Error parsing email:", err);
+                                    logErrorToDiscord(error);
                                     return;
                                 }
 
@@ -191,6 +202,7 @@ function startZohoMonitor() {
                                 const chatGptResponse = await analyzeEmailWithChatGPT(text);
                                 if (!chatGptResponse) {
                                     console.error("ChatGPT analysis failed.");
+                                    logErrorToDiscord(error);
                                     return;
                                 }
 
@@ -213,6 +225,7 @@ function startZohoMonitor() {
                                     channel.send({ content: "<@&1351259091745505361>", embeds: [embed] });
                                 } catch (error) {
                                     console.error("Error sending message to Discord:", error);
+                                    logErrorToDiscord(error);
                                 }
                             });
                         });
@@ -221,12 +234,14 @@ function startZohoMonitor() {
                             const { uid } = attrs;
                             imap.addFlags(uid, '\\Seen', err => {
                                 if (err) console.error("Error marking email as seen:", err);
+                                logErrorToDiscord(error);
                             });
                         });
                     });
 
                     f.once('error', err => {
                         console.error('Fetch error:', err);
+                        logErrorToDiscord(error);
                     });
                 });
             });
@@ -235,10 +250,12 @@ function startZohoMonitor() {
 
     imap.once('error', err => {
         console.error('IMAP error:', err);
+        logErrorToDiscord(error);
     });
 
     imap.once('end', () => {
         console.log('IMAP connection ended.');
+        logErrorToDiscord(log);
     });
 
     imap.connect();
@@ -547,7 +564,7 @@ client.on('interactionCreate', async interaction => {
                 await interaction.reply("⚠️ Could not retrieve a capybara image at this time.");
             }
         } catch (error) {
-            console.error("Error fetching capybara image:", error);
+            logErrorToDiscord(error);
             await interaction.reply("⚠️ Failed to retrieve a capybara image.");
         }
     }
@@ -611,21 +628,16 @@ async function analyzeEmailWithChatGPT(emailText) {
 
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    await cacheServerUsers();
+
+    try {
+        const logChannel = await client.channels.fetch("1352011403200041135");
+        await logChannel.send("✅ Bot is starting up...");
+    } catch (error) {
+        logErrorToDiscord(error);
+    }
     loadReminders(); // Load reminders when the bot starts
     startZohoMonitor(); // Start monitoring Zoho inbox
 });
-
-// Function to cache server users
-async function cacheServerUsers() {
-    client.guilds.cache.forEach(async guild => {
-        try {
-            await guild.members.fetch({ time: 10000 }); // Allow 10s before timeout
-        } catch (error) {
-            console.warn(`⚠️ Timeout fetching members for guild: ${guild.id}`);
-        }
-    });
-}
 
 client.login(process.env.TOKEN);
     
