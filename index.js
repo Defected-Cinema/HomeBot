@@ -234,7 +234,7 @@ function startZohoMonitor() {
                             const { uid } = attrs;
                             imap.addFlags(uid, '\\Seen', err => {
                                 if (err) console.error("Error marking email as seen:", err);
-                                logErrorToDiscord(error);
+                                logErrorToDiscord(console.error);
                             });
                         });
                     });
