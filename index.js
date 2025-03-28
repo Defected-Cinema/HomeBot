@@ -642,8 +642,10 @@ client.once('ready', async () => {
     startZohoMonitor(); // Start monitoring Zoho inbox
 
     // ✅ Safe to update presence now
-    await updateAlarmStatus();
-    setInterval(updateAlarmStatus, 5 * 60 * 1000);
+    setTimeout(() => {
+        updateAlarmStatus();
+        setInterval(updateAlarmStatus, 5 * 60 * 1000);
+    }, 5000); // Wait 5 seconds before the first update
 });
 
 // Set bot status based on Home Assistant security system
@@ -653,6 +655,7 @@ const homeAssistantToken = process.env.HOME_ASSISTANT_TOKEN;
 
 async function updateAlarmStatus() {
     try {
+        console.log("🔄 Updating Discord status based on HA alarm state...");
         const haResponse = await axios.get(`${homeAssistantUrl}/api/states/${alarmEntityId}`, {
             headers: {
                 "Authorization": `Bearer ${homeAssistantToken}`,
