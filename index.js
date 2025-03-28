@@ -1,9 +1,9 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const cron = require('node-cron');
-require('dotenv').config();
 const Imap = require('node-imap');
 const { simpleParser } = require('mailparser');
 
@@ -637,12 +637,17 @@ client.once('ready', async () => {
     } catch (error) {
         logErrorToDiscord(error);
     }
+
     loadReminders(); // Load reminders when the bot starts
     startZohoMonitor(); // Start monitoring Zoho inbox
+
+    // ✅ Safe to update presence now
+    await updateAlarmStatus();
+    setInterval(updateAlarmStatus, 5 * 60 * 1000);
 });
 
 // Set bot status based on Home Assistant security system
-const alarmEntityId = process.env.HOME_ASSISTANT_ALARM_ENTITY_ID;
+const alarmEntityId = process.env.ALARM_ENTITY_ID;
 const homeAssistantUrl = process.env.HOME_ASSISTANT_URL;
 const homeAssistantToken = process.env.HOME_ASSISTANT_TOKEN;
 
@@ -662,8 +667,12 @@ async function updateAlarmStatus() {
             ? "🔓 Security: Disarmed"
             : `Security: ${state}`;
 
+        if (!client.user) {
+            console.warn("Client user not initialized yet. Skipping presence update.");
+            return;
+        }
         client.user.setPresence({
-            activities: [{ name: presenceText }],
+            activities: [{ name: presenceText, type: 4 }],
             status: 'online'
         });
     } catch (err) {
@@ -672,9 +681,6 @@ async function updateAlarmStatus() {
     }
 }
 
-// Run initially and then every 5 minutes
-updateAlarmStatus();
-setInterval(updateAlarmStatus, 5 * 60 * 1000);
 
 client.login(process.env.TOKEN);
     
