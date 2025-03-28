@@ -641,11 +641,6 @@ client.once('ready', async () => {
     loadReminders(); // Load reminders when the bot starts
     startZohoMonitor(); // Start monitoring Zoho inbox
 
-    // ✅ Safe to update presence now
-    setTimeout(() => {
-        updateAlarmStatus();
-        setInterval(updateAlarmStatus, 5 * 60 * 1000);
-    }, 5000); // Wait 5 seconds before the first update
 });
 
 // Set bot status based on Home Assistant security system
@@ -686,4 +681,12 @@ async function updateAlarmStatus() {
 
 
 client.login(process.env.TOKEN);
+    
+client.once('ready', () => {
+    setTimeout(() => {
+        updateAlarmStatus();
+    }, 5000); // Delayed first run
+
+    setInterval(updateAlarmStatus, 5 * 60 * 1000); // Repeats every 5 minutes
+});
     
