@@ -681,12 +681,14 @@ async function updateAlarmStatus() {
 
 
 client.login(process.env.TOKEN);
-    
-client.once('ready', () => {
-    setTimeout(() => {
-        updateAlarmStatus();
-    }, 5000); // Delayed first run
 
-    setInterval(updateAlarmStatus, 5 * 60 * 1000); // Repeats every 5 minutes
-});
+// Start periodic Home Assistant status updates
+setTimeout(() => {
+    updateAlarmStatus();
+}, 5000); // Delayed first run
+
+setInterval(() => {
+    console.log("⏰ Running scheduled HA status check...");
+    updateAlarmStatus();
+}, 5 * 60 * 1000);
     
