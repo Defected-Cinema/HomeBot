@@ -11,6 +11,8 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const remindersFile = "reminders.json";
 let reminders = [];
 
+
+
 // Load reminders from file on startup
 function loadReminders() {
     if (fs.existsSync(remindersFile)) {
@@ -638,6 +640,41 @@ client.once('ready', async () => {
     loadReminders(); // Load reminders when the bot starts
     startZohoMonitor(); // Start monitoring Zoho inbox
 });
+
+// Set bot status based on Home Assistant security system
+const alarmEntityId = process.env.HOME_ASSISTANT_ALARM_ENTITY_ID;
+const homeAssistantUrl = process.env.HOME_ASSISTANT_URL;
+const homeAssistantToken = process.env.HOME_ASSISTANT_TOKEN;
+
+async function updateAlarmStatus() {
+    try {
+        const haResponse = await axios.get(`${homeAssistantUrl}/api/states/${alarmEntityId}`, {
+            headers: {
+                "Authorization": `Bearer ${homeAssistantToken}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        const state = haResponse.data.state;
+        const presenceText = state === "armed_away" || state === "armed_home"
+            ? "🔒 Security: Armed"
+            : state === "disarmed"
+            ? "🔓 Security: Disarmed"
+            : `Security: ${state}`;
+
+        client.user.setPresence({
+            activities: [{ name: presenceText }],
+            status: 'online'
+        });
+    } catch (err) {
+        console.error("Failed to fetch Home Assistant status:", err);
+        logErrorToDiscord(err);
+    }
+}
+
+// Run initially and then every 5 minutes
+updateAlarmStatus();
+setInterval(updateAlarmStatus, 5 * 60 * 1000);
 
 client.login(process.env.TOKEN);
     
